@@ -3,101 +3,191 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>王城战 UTC 撞击报时器</title>
+<title>王城战三路集结雷达</title>
 <style>
-  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #121212; color: #f0f0f0; padding: 15px; margin: 0; }
-  .card { max-width: 460px; margin: 10px auto; background: #1e1e1e; padding: 20px; border-radius: 12px; border: 1px solid #333; }
-  h2 { margin: 0 0 15px 0; text-align: center; color: #ff9800; font-size: 20px; }
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace; background: #121212; color: #fff; padding: 12px; margin: 0; }
   
-  .utc-bar { background: #2a2a2a; padding: 10px; border-radius: 8px; text-align: center; margin-bottom: 20px; border: 1px solid #444; }
-  .utc-time { font-size: 24px; font-weight: bold; color: #4caf50; font-family: monospace; }
-  
-  .form-group { margin-bottom: 15px; background: #252525; padding: 12px; border-radius: 8px; }
-  .form-group label { display: block; font-size: 14px; color: #aaa; margin-bottom: 8px; font-weight: bold; }
-  .inputs { display: flex; align-items: center; gap: 8px; }
-  input { width: 75px; height: 38px; font-size: 18px; text-align: center; border-radius: 6px; border: 1px solid #555; background: #333; color: #fff; }
-  
-  button { width: 100%; height: 46px; font-size: 18px; font-weight: bold; background: #e67e22; color: #fff; border: none; border-radius: 6px; cursor: pointer; margin-top: 5px; }
-  button:active { background: #d35400; }
-  
-  .result { margin-top: 20px; padding: 16px; background: #2c1a1a; border-radius: 8px; border: 1px solid #ff5252; text-align: center; display: none; }
-  .result-title { font-size: 14px; color: #aaa; }
-  .time-display { font-size: 32px; color: #ff5252; font-weight: bold; font-family: monospace; margin: 8px 0; }
-  .tips { font-size: 14px; color: #ffcc80; line-height: 1.5; }
+  .header { display: flex; justify-content: space-between; align-items: center; background: #1e1e1e; padding: 10px 16px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #333; }
+  .utc-label { font-size: 14px; color: #aaa; }
+  .utc-clock { font-size: 24px; font-weight: bold; color: #00e676; letter-spacing: 1px; }
+
+  .lanes { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; }
+  .lane-card { background: #1e1e1e; border-radius: 10px; border: 1px solid #333; padding: 14px; position: relative; }
+  .lane-card.danger { border-color: #ff3d00; background: #261414; }
+
+  .lane-title { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .lane-title span { font-weight: bold; font-size: 16px; color: #ffb74d; }
+  .btn-clear { background: #424242; border: none; color: #bbb; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px; }
+
+  .input-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 13px; color: #bbb; }
+  .input-row input { width: 65px; height: 32px; font-size: 16px; text-align: center; border-radius: 4px; border: 1px solid #555; background: #2a2a2a; color: #fff; }
+
+  .output-box { margin-top: 12px; padding: 10px; background: #111; border-radius: 6px; text-align: center; border: 1px dashed #444; }
+  .hit-utc { font-size: 22px; font-weight: bold; color: #ff5252; letter-spacing: 1px; }
+  .countdown { font-size: 16px; color: #ffeb3b; margin-top: 4px; font-weight: bold; }
+  .status-idle { color: #666; font-size: 14px; padding: 8px 0; }
 </style>
 </head>
 <body>
-<div class="card">
-  <h2>🏰 王城战 UTC 报时雷达</h2>
 
-  <div class="utc-bar">
-    <div style="font-size: 12px; color: #888;">当前游戏服务器时间 (UTC)</div>
-    <div class="utc-time" id="currentUtc">--:--:--</div>
+<div class="header">
+  <div>
+    <div class="utc-label">游戏服务器时间 (UTC)</div>
+    <div class="utc-clock" id="clock">--:--:--</div>
   </div>
+  <div style="font-size: 12px; color: #888;">输入数值即自动同步计算</div>
+</div>
 
-  <div class="form-group">
-    <label>1. 敌方集结等待剩余（还在等队友塞兵）：</label>
-    <div class="inputs">
-      <input type="number" id="waitM" placeholder="分" value="0" min="0"> 分
-      <input type="number" id="waitS" placeholder="秒" value="0" min="0" max="59"> 秒
+<div class="lanes">
+  <!-- 窗口 1 -->
+  <div class="lane-card" id="card-0">
+    <div class="lane-title">
+      <span>🎯 集结 1 (车头 A)</span>
+      <button class="btn-clear" onclick="clearLane(0)">清空重置</button>
+    </div>
+    <div class="input-row">
+      <label>集结倒计时(等待期):</label>
+      <div>
+        <input type="number" id="waitM-0" placeholder="分" min="0" oninput="recalc(0)"> 分
+        <input type="number" id="waitS-0" placeholder="秒" min="0" max="59" oninput="recalc(0)"> 秒
+      </div>
+    </div>
+    <div class="input-row">
+      <label>固定行军耗时(路程):</label>
+      <div>
+        <input type="number" id="marchS-0" placeholder="秒" value="45" min="0" oninput="recalc(0)"> 秒
+      </div>
+    </div>
+    <div class="output-box" id="out-0">
+      <div class="status-idle">等待输入时间...</div>
     </div>
   </div>
 
-  <div class="form-group">
-    <label>2. 敌方集结行军耗时（已经在路上就只填这里）：</label>
-    <div class="inputs">
-      <input type="number" id="marchM" placeholder="分" value="0" min="0"> 分
-      <input type="number" id="marchS" placeholder="秒" value="45" min="0" max="59"> 秒
+  <!-- 窗口 2 -->
+  <div class="lane-card" id="card-1">
+    <div class="lane-title">
+      <span>🎯 集结 2 (车头 B)</span>
+      <button class="btn-clear" onclick="clearLane(1)">清空重置</button>
+    </div>
+    <div class="input-row">
+      <label>集结倒计时(等待期):</label>
+      <div>
+        <input type="number" id="waitM-1" placeholder="分" min="0" oninput="recalc(1)"> 分
+        <input type="number" id="waitS-1" placeholder="秒" min="0" max="59" oninput="recalc(1)"> 秒
+      </div>
+    </div>
+    <div class="input-row">
+      <label>固定行军耗时(路程):</label>
+      <div>
+        <input type="number" id="marchS-1" placeholder="秒" value="45" min="0" oninput="recalc(1)"> 秒
+      </div>
+    </div>
+    <div class="output-box" id="out-1">
+      <div class="status-idle">等待输入时间...</div>
     </div>
   </div>
 
-  <button onclick="calculate()">计算撞击时间点</button>
-
-  <div class="result" id="res">
-    <div class="result-title">🎯 敌方精确撞击王城时间 (UTC)：</div>
-    <div class="time-display" id="hitTime">--:--:--</div>
-    <div class="tips" id="broadcastText"></div>
+  <!-- 窗口 3 -->
+  <div class="lane-card" id="card-2">
+    <div class="lane-title">
+      <span>🎯 集结 3 (车头 C)</span>
+      <button class="btn-clear" onclick="clearLane(2)">清空重置</button>
+    </div>
+    <div class="input-row">
+      <label>集结倒计时(等待期):</label>
+      <div>
+        <input type="number" id="waitM-2" placeholder="分" min="0" oninput="recalc(2)"> 分
+        <input type="number" id="waitS-2" placeholder="秒" min="0" max="59" oninput="recalc(2)"> 秒
+      </div>
+    </div>
+    <div class="input-row">
+      <label>固定行军耗时(路程):</label>
+      <div>
+        <input type="number" id="marchS-2" placeholder="秒" value="45" min="0" oninput="recalc(2)"> 秒
+      </div>
+    </div>
+    <div class="output-box" id="out-2">
+      <div class="status-idle">等待输入时间...</div>
+    </div>
   </div>
 </div>
 
 <script>
 function pad(n) { return n < 10 ? '0' + n : n; }
 
-// 实时更新当前 UTC 时间
-function updateUtcClock() {
+// 存储三个窗口的绝对撞击时间戳 (毫秒)
+const targets = [null, null, null];
+
+function updateClock() {
   const now = new Date();
   const h = pad(now.getUTCHours());
   const m = pad(now.getUTCMinutes());
   const s = pad(now.getUTCSeconds());
-  document.getElementById('currentUtc').innerText = `${h}:${m}:${s}`;
+  document.getElementById('clock').innerText = `${h}:${m}:${s}`;
+
+  // 刷新三个卡片的倒计时
+  for (let i = 0; i < 3; i++) {
+    renderOutput(i, now.getTime());
+  }
 }
-setInterval(updateUtcClock, 1000);
-updateUtcClock();
+setInterval(updateClock, 1000);
+updateClock();
 
-function calculate() {
-  const waitM = parseInt(document.getElementById('waitM').value) || 0;
-  const waitS = parseInt(document.getElementById('waitS').value) || 0;
-  const marchM = parseInt(document.getElementById('marchM').value) || 0;
-  const marchS = parseInt(document.getElementById('marchS').value) || 0;
+// 只要输入数字，立即锁定目标时间，消灭按键延迟
+function recalc(i) {
+  const waitM = parseInt(document.getElementById(`waitM-${i}`).value) || 0;
+  const waitS = parseInt(document.getElementById(`waitS-${i}`).value) || 0;
+  const marchS = parseInt(document.getElementById(`marchS-${i}`).value) || 0;
 
-  const totalWaitSec = waitM * 60 + waitS;
-  const totalMarchSec = marchM * 60 + marchS;
-  const totalSec = totalWaitSec + totalMarchSec;
+  const totalSec = waitM * 60 + waitS + marchS;
+  if (totalSec <= 0) {
+    targets[i] = null;
+  } else {
+    // 立即以当前系统时间推算目标时刻并固定
+    targets[i] = Date.now() + totalSec * 1000;
+  }
+  renderOutput(i, Date.now());
+}
 
-  const now = new Date();
-  const hitDate = new Date(now.getTime() + totalSec * 1000);
+function renderOutput(i, nowTime) {
+  const out = document.getElementById(`out-${i}`);
+  const card = document.getElementById(`card-${i}`);
+  const target = targets[i];
 
-  const hitH = pad(hitDate.getUTCHours());
-  const hitM = pad(hitDate.getUTCMinutes());
-  const hitS = pad(hitDate.getUTCSeconds());
-  const hitString = `${hitH}:${hitM}:${hitS}`;
+  if (!target) {
+    out.innerHTML = `<div class="status-idle">等待输入时间...</div>`;
+    card.classList.remove('danger');
+    return;
+  }
 
-  document.getElementById('res').style.display = 'block';
-  document.getElementById('hitTime').innerText = hitString;
-  document.getElementById('broadcastText').innerHTML = `
-    📢 <strong>语音/打字直接播报：</strong><br>
-    “王城 <strong>${hitString}</strong> 撞，补防看好自己的行军时间提前进！”
-  `;
+  const diffSec = Math.round((target - nowTime) / 1000);
+  const targetDate = new Date(target);
+  const tStr = `${pad(targetDate.getUTCHours())}:${pad(targetDate.getUTCMinutes())}:${pad(targetDate.getUTCSeconds())}`;
+
+  if (diffSec <= 0) {
+    out.innerHTML = `<div style="color:#ff5252; font-weight:bold; font-size:18px;">💥 已撞击 (${tStr})</div>`;
+    card.classList.remove('danger');
+  } else {
+    // 剩余不到15秒时高亮警报
+    if (diffSec <= 15) {
+      card.classList.add('danger');
+    } else {
+      card.classList.remove('danger');
+    }
+    out.innerHTML = `
+      <div style="font-size:12px; color:#aaa;">撞击时间 (UTC)</div>
+      <div class="hit-utc">${tStr}</div>
+      <div class="countdown">剩 ${diffSec} 秒撞击</div>
+    `;
+  }
+}
+
+function clearLane(i) {
+  document.getElementById(`waitM-${i}`).value = '';
+  document.getElementById(`waitS-${i}`).value = '';
+  targets[i] = null;
+  renderOutput(i, Date.now());
 }
 </script>
 </body>
