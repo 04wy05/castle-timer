@@ -12,21 +12,30 @@
   .utc-label { font-size: 13px; color: #aaa; text-transform: uppercase; letter-spacing: 0.5px; }
   .utc-clock { font-size: 24px; font-weight: bold; color: #00e676; letter-spacing: 1px; }
 
-  .lanes { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; }
+  .lanes { display: grid; grid-template-columns: repeat(auto-fit, minmax(310px, 1fr)); gap: 12px; }
   .lane-card { background: #1e1e1e; border-radius: 10px; border: 1px solid #333; padding: 14px; position: relative; }
   .lane-card.danger { border-color: #ff3d00; background: #261414; }
 
-  .lane-title { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  .lane-title { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
   .lane-title span { font-weight: bold; font-size: 15px; color: #ffb74d; }
-  .btn-clear { background: #424242; border: none; color: #bbb; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px; }
+  
+  .btn-reset { background: #424242; border: none; color: #eee; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold; }
+  .btn-reset:hover { background: #616161; }
 
   .input-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 13px; color: #bbb; }
-  .input-row input { width: 60px; height: 32px; font-size: 16px; text-align: center; border-radius: 4px; border: 1px solid #555; background: #2a2a2a; color: #fff; }
+  .input-row input { height: 32px; font-size: 15px; border-radius: 4px; border: 1px solid #555; background: #2a2a2a; color: #fff; }
+  .input-leader { width: 150px; padding: 0 8px; text-align: left; }
+  .input-num { width: 55px; text-align: center; }
 
   .output-box { margin-top: 12px; padding: 10px; background: #111; border-radius: 6px; text-align: center; border: 1px dashed #444; }
-  .hit-utc { font-size: 24px; font-weight: bold; color: #ff5252; letter-spacing: 1px; }
-  .countdown { font-size: 15px; color: #ffeb3b; margin-top: 4px; font-weight: bold; }
+  .hit-label { font-size: 11px; color: #aaa; text-transform: uppercase; letter-spacing: 0.5px; }
+  .hit-utc { font-size: 24px; font-weight: bold; color: #ff5252; letter-spacing: 1px; margin: 2px 0; }
+  .countdown { font-size: 15px; color: #ffeb3b; margin: 4px 0 8px 0; font-weight: bold; }
   .status-idle { color: #666; font-size: 13px; padding: 8px 0; }
+
+  .btn-copy { width: 100%; height: 32px; background: #2e7d32; border: none; color: #fff; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: bold; display: none; }
+  .btn-copy:hover { background: #388e3c; }
+  .btn-copy.copied { background: #1565c0; }
 </style>
 </head>
 <body>
@@ -44,72 +53,87 @@
   <div class="lane-card" id="card-0">
     <div class="lane-title">
       <span>🎯 RALLY 1</span>
-      <button class="btn-clear" onclick="clearLane(0)">Reset</button>
+      <button class="btn-reset" onclick="resetLane(0)">Reset</button>
+    </div>
+    <div class="input-row">
+      <label>Rally Leader:</label>
+      <input type="text" class="input-leader" id="leader-0" placeholder="e.g. BossA" oninput="recalc(0)">
     </div>
     <div class="input-row">
       <label>Rally Timer (Waiting):</label>
       <div>
-        <input type="number" id="waitM-0" placeholder="m" min="0" oninput="recalc(0)"> m
-        <input type="number" id="waitS-0" placeholder="s" min="0" max="59" oninput="recalc(0)"> s
+        <input type="number" class="input-num" id="waitM-0" placeholder="m" min="0" oninput="recalc(0)"> m
+        <input type="number" class="input-num" id="waitS-0" placeholder="s" min="0" max="59" oninput="recalc(0)"> s
       </div>
     </div>
     <div class="input-row">
       <label>March Duration:</label>
       <div>
-        <input type="number" id="marchS-0" placeholder="s" value="45" min="0" oninput="recalc(0)"> s
+        <input type="number" class="input-num" id="marchS-0" placeholder="s" value="45" min="0" oninput="recalc(0)"> s
       </div>
     </div>
     <div class="output-box" id="out-0">
       <div class="status-idle">Awaiting time input...</div>
     </div>
+    <button class="btn-copy" id="copy-0" onclick="copyOutcome(0)">📋 Copy Callout</button>
   </div>
 
   <!-- Lane 2 -->
   <div class="lane-card" id="card-1">
     <div class="lane-title">
       <span>🎯 RALLY 2</span>
-      <button class="btn-clear" onclick="clearLane(1)">Reset</button>
+      <button class="btn-reset" onclick="resetLane(1)">Reset</button>
+    </div>
+    <div class="input-row">
+      <label>Rally Leader:</label>
+      <input type="text" class="input-leader" id="leader-1" placeholder="e.g. BossB" oninput="recalc(1)">
     </div>
     <div class="input-row">
       <label>Rally Timer (Waiting):</label>
       <div>
-        <input type="number" id="waitM-1" placeholder="m" min="0" oninput="recalc(1)"> m
-        <input type="number" id="waitS-1" placeholder="s" min="0" max="59" oninput="recalc(1)"> s
+        <input type="number" class="input-num" id="waitM-1" placeholder="m" min="0" oninput="recalc(1)"> m
+        <input type="number" class="input-num" id="waitS-1" placeholder="s" min="0" max="59" oninput="recalc(1)"> s
       </div>
     </div>
     <div class="input-row">
       <label>March Duration:</label>
       <div>
-        <input type="number" id="marchS-1" placeholder="s" value="45" min="0" oninput="recalc(1)"> s
+        <input type="number" class="input-num" id="marchS-1" placeholder="s" value="45" min="0" oninput="recalc(1)"> s
       </div>
     </div>
     <div class="output-box" id="out-1">
       <div class="status-idle">Awaiting time input...</div>
     </div>
+    <button class="btn-copy" id="copy-1" onclick="copyOutcome(1)">📋 Copy Callout</button>
   </div>
 
   <!-- Lane 3 -->
   <div class="lane-card" id="card-2">
     <div class="lane-title">
       <span>🎯 RALLY 3</span>
-      <button class="btn-clear" onclick="clearLane(2)">Reset</button>
+      <button class="btn-reset" onclick="resetLane(2)">Reset</button>
+    </div>
+    <div class="input-row">
+      <label>Rally Leader:</label>
+      <input type="text" class="input-leader" id="leader-2" placeholder="e.g. BossC" oninput="recalc(2)">
     </div>
     <div class="input-row">
       <label>Rally Timer (Waiting):</label>
       <div>
-        <input type="number" id="waitM-2" placeholder="m" min="0" oninput="recalc(2)"> m
-        <input type="number" id="waitS-2" placeholder="s" min="0" max="59" oninput="recalc(2)"> s
+        <input type="number" class="input-num" id="waitM-2" placeholder="m" min="0" oninput="recalc(2)"> m
+        <input type="number" class="input-num" id="waitS-2" placeholder="s" min="0" max="59" oninput="recalc(2)"> s
       </div>
     </div>
     <div class="input-row">
       <label>March Duration:</label>
       <div>
-        <input type="number" id="marchS-2" placeholder="s" value="45" min="0" oninput="recalc(2)"> s
+        <input type="number" class="input-num" id="marchS-2" placeholder="s" value="45" min="0" oninput="recalc(2)"> s
       </div>
     </div>
     <div class="output-box" id="out-2">
       <div class="status-idle">Awaiting time input...</div>
     </div>
+    <button class="btn-copy" id="copy-2" onclick="copyOutcome(2)">📋 Copy Callout</button>
   </div>
 </div>
 
@@ -152,12 +176,14 @@ function recalc(i) {
 function renderOutput(i, nowTime) {
   const out = document.getElementById(`out-${i}`);
   const card = document.getElementById(`card-${i}`);
-  if (!out || !card) return;
+  const copyBtn = document.getElementById(`copy-${i}`);
+  if (!out || !card || !copyBtn) return;
   const target = targets[i];
 
   if (!target) {
     out.innerHTML = `<div class="status-idle">Awaiting time input...</div>`;
     card.classList.remove('danger');
+    copyBtn.style.display = 'none';
     return;
   }
 
@@ -165,8 +191,10 @@ function renderOutput(i, nowTime) {
   const targetDate = new Date(target);
   const tStr = `${pad(targetDate.getUTCHours())}:${pad(targetDate.getUTCMinutes())}:${pad(targetDate.getUTCSeconds())}`;
 
+  copyBtn.style.display = 'block';
+
   if (diffSec <= 0) {
-    out.innerHTML = `<div style="color:#ff5252; font-weight:bold; font-size:16px;">💥 HIT TARGET (${tStr})</div>`;
+    out.innerHTML = `<div style="color:#ff5252; font-weight:bold; font-size:16px;">💥 HIT CASTLE (${tStr})</div>`;
     card.classList.remove('danger');
   } else {
     if (diffSec <= 15) {
@@ -175,22 +203,46 @@ function renderOutput(i, nowTime) {
       card.classList.remove('danger');
     }
     out.innerHTML = `
-      <div style="font-size:11px; color:#aaa; text-transform:uppercase;">Hit Time (UTC)</div>
+      <div class="hit-label">Hits Castle (UTC)</div>
       <div class="hit-utc">${tStr}</div>
       <div class="countdown">${diffSec}s remaining</div>
     `;
   }
 }
 
-function clearLane(i) {
-  const mInput = document.getElementById(`waitM-${i}`);
-  const sInput = document.getElementById(`waitS-${i}`);
-  if (mInput) mInput.value = '';
-  if (sInput) sInput.value = '';
+function resetLane(i) {
+  document.getElementById(`leader-${i}`).value = '';
+  document.getElementById(`waitM-${i}`).value = '';
+  document.getElementById(`waitS-${i}`).value = '';
   targets[i] = null;
+  const copyBtn = document.getElementById(`copy-${i}`);
+  if (copyBtn) {
+    copyBtn.innerText = '📋 Copy Callout';
+    copyBtn.classList.remove('copied');
+  }
   renderOutput(i, Date.now());
+}
+
+function copyOutcome(i) {
+  const target = targets[i];
+  if (!target) return;
+
+  const leaderName = document.getElementById(`leader-${i}`).value.trim() || `Rally ${i+1}`;
+  const targetDate = new Date(target);
+  const tStr = `${pad(targetDate.getUTCHours())}:${pad(targetDate.getUTCMinutes())}:${pad(targetDate.getUTCSeconds())}`;
+
+  const textToCopy = `[${leaderName}] Hits Castle at UTC ${tStr}`;
+
+  navigator.clipboard.writeText(textToCopy).then(() => {
+    const btn = document.getElementById(`copy-${i}`);
+    btn.innerText = '✅ Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => {
+      btn.innerText = '📋 Copy Callout';
+      btn.classList.remove('copied');
+    }, 2000);
+  });
 }
 </script>
 </body>
 </html>
-   
