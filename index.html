@@ -44,7 +44,7 @@
 <div class="header">
   <div>
     <div class="utc-label">Server Time (UTC)</div>
-    <div class="utc-clock" id="clock">--:--:--</div>
+    <div class="utc-clock" id="clock">00:00:00</div>
   </div>
   <div class="global-actions">
     <button class="btn-global btn-global-copy" id="btnCopyAll" onclick="copyAllOutcomes()">📋 Copy All Outcomes</button>
@@ -138,47 +138,61 @@
 <script>
 function pad(n) { return n < 10 ? '0' + n : n; }
 
-const targets = [null, null, null];
+var targets = [null, null, null];
 
 function updateClock() {
-  const now = new Date();
-  const h = pad(now.getUTCHours());
-  const m = pad(now.getUTCMinutes());
-  const s = pad(now.getUTCSeconds());
-  const clockEl = document.getElementById('clock');
+  var now = new Date();
+  var h = pad(now.getUTCHours());
+  var m = pad(now.getUTCMinutes());
+  var s = pad(now.getUTCSeconds());
+  var clockEl = document.getElementById('clock');
   if (clockEl) {
-    clockEl.innerText = `${h}:${m}:${s}`; }  for (let i = 0; i < 3; i++) { renderOutput(i, now.getTime()); } } setInterval(updateClock, 1000); updateClock();  function recalc(i) { const waitM = parseInt(document.getElementById(`waitM-${i}`).value) || 0;
-  const waitS = parseInt(document.getElementById(`waitS-${i}`).value) \vert{}\vert{} 0; const marchS = parseInt(document.getElementById(`marchS-${i}`).value) || 0;
+    clockEl.innerText = h + ':' + m + ':' + s;
+  }
 
-  const rawM = document.getElementById(`waitM-${i}`).value.trim(); const rawS = document.getElementById(`waitS-${i}`).value.trim();
+  for (var i = 0; i < 3; i++) {
+    renderOutput(i, now.getTime());
+  }
+}
 
-  // 只有当有时间输入时才开始计算
+function recalc(i) {
+  var waitMInput = document.getElementById('waitM-' + i);
+  var waitSInput = document.getElementById('waitS-' + i);
+  var marchSInput = document.getElementById('marchS-' + i);
+
+  var rawM = waitMInput ? waitMInput.value.trim() : '';
+  var rawS = waitSInput ? waitSInput.value.trim() : '';
+
   if (rawM === '' && rawS === '') {
     targets[i] = null;
   } else {
-    const totalSec = waitM * 60 + waitS + marchS;
+    var waitM = parseInt(rawM) || 0;
+    var waitS = parseInt(rawS) || 0;
+    var marchS = parseInt(marchSInput ? marchSInput.value : 45) || 0;
+    var totalSec = waitM * 60 + waitS + marchS;
     targets[i] = Date.now() + totalSec * 1000;
   }
   renderOutput(i, Date.now());
 }
 
 function renderOutput(i, nowTime) {
-  const out = document.getElementById(`out-${i}`); const card = document.getElementById(`card-${i}`);
+  var out = document.getElementById('out-' + i);
+  var card = document.getElementById('card-' + i);
   if (!out || !card) return;
-  const target = targets[i];
+  var target = targets[i];
 
   if (!target) {
-    out.innerHTML = `<div class="status-idle">Awaiting time input...</div>`;
+    out.innerHTML = '<div class="status-idle">Awaiting time input...</div>';
     card.classList.remove('danger');
     return;
   }
 
-  const diffSec = Math.round((target - nowTime) / 1000);
-  const targetDate = new Date(target);
-  const tStr = `${pad(targetDate.getUTCHours())}:${pad(targetDate.getUTCMinutes())}:${pad(targetDate.getUTCSeconds())}`;
+  var diffSec = Math.round((target - nowTime) / 1000);
+  var targetDate = new Date(target);
+  var tStr = pad(targetDate.getUTCHours()) + ':' + pad(targetDate.getUTCMinutes()) + ':' + pad(targetDate.getUTCSeconds());
 
   if (diffSec <= 0) {
-    out.innerHTML = `<div style="color:#ff5252; font-weight:bold; font-size:16px;">💥 HIT CASTLE (${tStr})</div>`;
+    out.innerHTML = '<div style="color:#ff5252; font-weight:bold; font-size:16px;">💥 HIT CASTLE (' + tStr + ')</div>';
     card.classList.remove('danger');
   } else {
     if (diffSec <= 15) {
@@ -186,51 +200,57 @@ function renderOutput(i, nowTime) {
     } else {
       card.classList.remove('danger');
     }
-    out.innerHTML = `
-      <div class="hit-label">Hits Castle (UTC)</div>
-      <div class="hit-utc">${tStr}</div>
-      <div class="countdown">${diffSec}s remaining</div>
-    `;
+    out.innerHTML = '<div class="hit-label">Hits Castle (UTC)</div><div class="hit-utc">' + tStr + '</div><div class="countdown">' + diffSec + 's remaining</div>';
   }
 }
 
-// 只重置 3 个窗口的等待时间，保留名字与固定行军耗时
 function resetAllTimers() {
-  for (let i = 0; i < 3; i++) {
-    document.getElementById(`waitM-${i}`).value = '';
-    document.getElementById(`waitS-${i}`).value = '';
+  for (var i = 0; i < 3; i++) {
+    var mEl = document.getElementById('waitM-' + i);
+    var sEl = document.getElementById('waitS-' + i);
+    if (mEl) mEl.value = '';
+    if (sEl) sEl.value = '';
     targets[i] = null;
     renderOutput(i, Date.now());
   }
 }
 
-// 一键复制所有正在监控的集结结果
 function copyAllOutcomes() {
-  const lines = [];
-
-  for (let i = 0; i < 3; i++) {
-    const target = targets[i];
+  var lines = [];
+  for (var i = 0; i < 3; i++) {
+    var target = targets[i];
     if (target) {
-      const leaderName = document.getElementById(`leader-${i}`).value.trim() || `Rally ${i+1}`;
-      const targetDate = new Date(target);
-      const tStr = `${pad(targetDate.getUTCHours())}:${pad(targetDate.getUTCMinutes())}:${pad(targetDate.getUTCSeconds())}`;
-      lines.push(`[${leaderName}] Hits Castle at UTC ${tStr}`);
+      var leaderEl = document.getElementById('leader-' + i);
+      var leaderName = (leaderEl && leaderEl.value.trim()) ? leaderEl.value.trim() : 'Rally ' + (i + 1);
+      var targetDate = new Date(target);
+      var tStr = pad(targetDate.getUTCHours()) + ':' + pad(targetDate.getUTCMinutes()) + ':' + pad(targetDate.getUTCSeconds());
+      lines.push('[' + leaderName + '] Hits Castle at UTC ' + tStr);
     }
   }
 
   if (lines.length === 0) return;
 
-  const textToCopy = lines.join('\n');
-  navigator.clipboard.writeText(textToCopy).then(() => {
-    const btn = document.getElementById('btnCopyAll');
-    btn.innerText = '✅ Copied All!';
-    btn.classList.add('copied');
-    setTimeout(() => {
-      btn.innerText = '📋 Copy All Outcomes';
-      btn.classList.remove('copied');
-    }, 2000);
+  var textToCopy = lines.join('\n');
+  navigator.clipboard.writeText(textToCopy).then(function() {
+    var btn = document.getElementById('btnCopyAll');
+    if (btn) {
+      btn.innerText = '✅ Copied All!';
+      btn.classList.add('copied');
+      setTimeout(function() {
+        btn.innerText = '📋 Copy All Outcomes';
+        btn.classList.remove('copied');
+      }, 2000);
+    }
   });
 }
+
+// 确保页面 DOM 全部加载完成后启动计时循环
+window.addEventListener('DOMContentLoaded', function() {
+  updateClock();
+  setInterval(updateClock, 1000);
+});
+updateClock();
+setInterval(updateClock, 1000);
 </script>
 </body>
 </html>
