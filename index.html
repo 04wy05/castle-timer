@@ -12,20 +12,24 @@
   .utc-label { font-size: 13px; color: #aaa; text-transform: uppercase; letter-spacing: 0.5px; }
   .utc-clock { font-size: 24px; font-weight: bold; color: #00e676; letter-spacing: 1px; }
 
-  .global-actions { display: flex; gap: 8px; }
+  .global-actions { display: flex; gap: 8px; flex-wrap: wrap; }
   .btn-global { border: none; padding: 8px 14px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: bold; color: #fff; }
+  .btn-global-add { background: #1976d2; }
+  .btn-global-add:hover { background: #1e88e5; }
   .btn-global-copy { background: #2e7d32; }
   .btn-global-copy:hover { background: #388e3c; }
-  .btn-global-copy.copied { background: #1565c0; }
+  .btn-global-copy.copied { background: #00838f; }
   .btn-global-reset { background: #424242; }
   .btn-global-reset:hover { background: #616161; }
 
-  .lanes { display: grid; grid-template-columns: repeat(auto-fit, minmax(310px, 1fr)); gap: 12px; }
+  .lanes { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; }
   .lane-card { background: #1e1e1e; border-radius: 10px; border: 1px solid #333; padding: 14px; position: relative; }
   .lane-card.danger { border-color: #ff3d00; background: #261414; }
 
   .lane-title { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
   .lane-title span { font-weight: bold; font-size: 15px; color: #ffb74d; }
+  .btn-remove { background: transparent; border: 1px solid #444; color: #888; padding: 2px 7px; border-radius: 4px; cursor: pointer; font-size: 12px; }
+  .btn-remove:hover { border-color: #ff5252; color: #ff5252; }
 
   .input-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 13px; color: #bbb; }
   .input-row input { height: 32px; font-size: 15px; border-radius: 4px; border: 1px solid #555; background: #2a2a2a; color: #fff; }
@@ -47,98 +51,81 @@
     <div class="utc-clock" id="clock">00:00:00</div>
   </div>
   <div class="global-actions">
+    <button class="btn-global btn-global-add" onclick="addLane()">➕ Add Rally</button>
     <button class="btn-global btn-global-copy" id="btnCopyAll" onclick="copyAllOutcomes()">📋 Copy All Outcomes</button>
     <button class="btn-global btn-global-reset" onclick="resetAllTimers()">🔄 Reset Timers</button>
   </div>
 </div>
 
-<div class="lanes">
-  <!-- Lane 1 -->
-  <div class="lane-card" id="card-0">
-    <div class="lane-title">
-      <span>🎯 RALLY 1</span>
-    </div>
-    <div class="input-row">
-      <label>Rally Leader:</label>
-      <input type="text" class="input-leader" id="leader-0" placeholder="e.g. BossA" oninput="recalc(0)">
-    </div>
-    <div class="input-row">
-      <label>Rally Timer (Waiting):</label>
-      <div>
-        <input type="number" class="input-num" id="waitM-0" placeholder="m" min="0" oninput="recalc(0)"> m
-        <input type="number" class="input-num" id="waitS-0" placeholder="s" min="0" max="59" oninput="recalc(0)"> s
-      </div>
-    </div>
-    <div class="input-row">
-      <label>March Duration:</label>
-      <div>
-        <input type="number" class="input-num" id="marchS-0" placeholder="s" value="45" min="0" oninput="recalc(0)"> s
-      </div>
-    </div>
-    <div class="output-box" id="out-0">
-      <div class="status-idle">Awaiting time input...</div>
-    </div>
-  </div>
-
-  <!-- Lane 2 -->
-  <div class="lane-card" id="card-1">
-    <div class="lane-title">
-      <span>🎯 RALLY 2</span>
-    </div>
-    <div class="input-row">
-      <label>Rally Leader:</label>
-      <input type="text" class="input-leader" id="leader-1" placeholder="e.g. BossB" oninput="recalc(1)">
-    </div>
-    <div class="input-row">
-      <label>Rally Timer (Waiting):</label>
-      <div>
-        <input type="number" class="input-num" id="waitM-1" placeholder="m" min="0" oninput="recalc(1)"> m
-        <input type="number" class="input-num" id="waitS-1" placeholder="s" min="0" max="59" oninput="recalc(1)"> s
-      </div>
-    </div>
-    <div class="input-row">
-      <label>March Duration:</label>
-      <div>
-        <input type="number" class="input-num" id="marchS-1" placeholder="s" value="45" min="0" oninput="recalc(1)"> s
-      </div>
-    </div>
-    <div class="output-box" id="out-1">
-      <div class="status-idle">Awaiting time input...</div>
-    </div>
-  </div>
-
-  <!-- Lane 3 -->
-  <div class="lane-card" id="card-2">
-    <div class="lane-title">
-      <span>🎯 RALLY 3</span>
-    </div>
-    <div class="input-row">
-      <label>Rally Leader:</label>
-      <input type="text" class="input-leader" id="leader-2" placeholder="e.g. BossC" oninput="recalc(2)">
-    </div>
-    <div class="input-row">
-      <label>Rally Timer (Waiting):</label>
-      <div>
-        <input type="number" class="input-num" id="waitM-2" placeholder="m" min="0" oninput="recalc(2)"> m
-        <input type="number" class="input-num" id="waitS-2" placeholder="s" min="0" max="59" oninput="recalc(2)"> s
-      </div>
-    </div>
-    <div class="input-row">
-      <label>March Duration:</label>
-      <div>
-        <input type="number" class="input-num" id="marchS-2" placeholder="s" value="45" min="0" oninput="recalc(2)"> s
-      </div>
-    </div>
-    <div class="output-box" id="out-2">
-      <div class="status-idle">Awaiting time input...</div>
-    </div>
-  </div>
-</div>
+<div class="lanes" id="lanesContainer"></div>
 
 <script>
 function pad(n) { return n < 10 ? '0' + n : n; }
 
-var targets = [null, null, null];
+// 存储每个卡片的独立状态 { id, target }
+var lanes = [];
+var nextId = 1;
+
+function addLane() {
+  var id = nextId++;
+  lanes.push({ id: id, target: null });
+
+  var container = document.getElementById('lanesContainer');
+  var card = document.createElement('div');
+  card.className = 'lane-card';
+  card.id = 'card-' + id;
+
+  card.innerHTML =
+    '<div class="lane-title">' +
+      '<span class="lane-label">🎯 RALLY ' + lanes.length + '</span>' +
+      '<button class="btn-remove" onclick="removeLane(' + id + ')" title="Remove card">✖</button>' +
+    '</div>' +
+    '<div class="input-row">' +
+      '<label>Rally Leader:</label>' +
+      '<input type="text" class="input-leader" id="leader-' + id + '" placeholder="e.g. Boss" oninput="recalc(' + id + ')">' +
+    '</div>' +
+    '<div class="input-row">' +
+      '<label>Rally Timer (Waiting):</label>' +
+      '<div>' +
+        '<input type="number" class="input-num" id="waitM-' + id + '" placeholder="m" min="0" oninput="recalc(' + id + ')"> m ' +
+        '<input type="number" class="input-num" id="waitS-' + id + '" placeholder="s" min="0" max="59" oninput="recalc(' + id + ')"> s' +
+      '</div>' +
+    '</div>' +
+    '<div class="input-row">' +
+      '<label>March Duration:</label>' +
+      '<div>' +
+        '<input type="number" class="input-num" id="marchS-' + id + '" placeholder="s" value="45" min="0" oninput="recalc(' + id + ')"> s' +
+      '</div>' +
+    '</div>' +
+    '<div class="output-box" id="out-' + id + '">' +
+      '<div class="status-idle">Awaiting time input...</div>' +
+    '</div>';
+
+  container.appendChild(card);
+  updateLaneLabels();
+}
+
+function removeLane(id) {
+  if (lanes.length <= 1) return; // 至少保留1张卡片
+  lanes = lanes.filter(function(item) { return item.id !== id; });
+  var card = document.getElementById('card-' + id);
+  if (card) card.remove();
+  updateLaneLabels();
+}
+
+function updateLaneLabels() {
+  var labels = document.querySelectorAll('.lane-label');
+  for (var i = 0; i < labels.length; i++) {
+    labels[i].innerText = '🎯 RALLY ' + (i + 1);
+  }
+}
+
+function getLaneObj(id) {
+  for (var i = 0; i < lanes.length; i++) {
+    if (lanes[i].id === id) return lanes[i];
+  }
+  return null;
+}
 
 function updateClock() {
   var now = new Date();
@@ -150,37 +137,42 @@ function updateClock() {
     clockEl.innerText = h + ':' + m + ':' + s;
   }
 
-  for (var i = 0; i < 3; i++) {
-    renderOutput(i, now.getTime());
+  var nowTime = now.getTime();
+  for (var i = 0; i < lanes.length; i++) {
+    renderOutput(lanes[i].id, nowTime);
   }
 }
 
-function recalc(i) {
-  var waitMInput = document.getElementById('waitM-' + i);
-  var waitSInput = document.getElementById('waitS-' + i);
-  var marchSInput = document.getElementById('marchS-' + i);
+function recalc(id) {
+  var lane = getLaneObj(id);
+  if (!lane) return;
+
+  var waitMInput = document.getElementById('waitM-' + id);
+  var waitSInput = document.getElementById('waitS-' + id);
+  var marchSInput = document.getElementById('marchS-' + id);
 
   var rawM = waitMInput ? waitMInput.value.trim() : '';
   var rawS = waitSInput ? waitSInput.value.trim() : '';
 
   if (rawM === '' && rawS === '') {
-    targets[i] = null;
+    lane.target = null;
   } else {
     var waitM = parseInt(rawM) || 0;
     var waitS = parseInt(rawS) || 0;
     var marchS = parseInt(marchSInput ? marchSInput.value : 45) || 0;
     var totalSec = waitM * 60 + waitS + marchS;
-    targets[i] = Date.now() + totalSec * 1000;
+    lane.target = Date.now() + totalSec * 1000;
   }
-  renderOutput(i, Date.now());
+  renderOutput(id, Date.now());
 }
 
-function renderOutput(i, nowTime) {
-  var out = document.getElementById('out-' + i);
-  var card = document.getElementById('card-' + i);
-  if (!out || !card) return;
-  var target = targets[i];
+function renderOutput(id, nowTime) {
+  var lane = getLaneObj(id);
+  var out = document.getElementById('out-' + id);
+  var card = document.getElementById('card-' + id);
+  if (!lane || !out || !card) return;
 
+  var target = lane.target;
   if (!target) {
     out.innerHTML = '<div class="status-idle">Awaiting time input...</div>';
     card.classList.remove('danger');
@@ -205,36 +197,47 @@ function renderOutput(i, nowTime) {
 }
 
 function resetAllTimers() {
-  for (var i = 0; i < 3; i++) {
-    var mEl = document.getElementById('waitM-' + i);
-    var sEl = document.getElementById('waitS-' + i);
+  for (var i = 0; i < lanes.length; i++) {
+    var id = lanes[i].id;
+    var mEl = document.getElementById('waitM-' + id);
+    var sEl = document.getElementById('waitS-' + id);
     if (mEl) mEl.value = '';
     if (sEl) sEl.value = '';
-    targets[i] = null;
-    renderOutput(i, Date.now());
+    lanes[i].target = null;
+    renderOutput(id, Date.now());
   }
 }
 
 function copyAllOutcomes() {
-  var lines = [];
-  for (var i = 0; i < 3; i++) {
-    var target = targets[i];
-    if (target) {
-      var leaderEl = document.getElementById('leader-' + i);
+  var activeList = [];
+  for (var i = 0; i < lanes.length; i++) {
+    var lane = lanes[i];
+    if (lane.target) {
+      var leaderEl = document.getElementById('leader-' + lane.id);
       var leaderName = (leaderEl && leaderEl.value.trim()) ? leaderEl.value.trim() : 'Rally ' + (i + 1);
-      var targetDate = new Date(target);
-      var tStr = pad(targetDate.getUTCHours()) + ':' + pad(targetDate.getUTCMinutes()) + ':' + pad(targetDate.getUTCSeconds());
-      lines.push('[' + leaderName + '] Hits Castle at UTC ' + tStr);
+      activeList.push({
+        leader: leaderName,
+        target: lane.target
+      });
     }
   }
 
-  if (lines.length === 0) return;
+  if (activeList.length === 0) return;
+
+  // 按撞击时间从早到晚自动排序，方便联盟看先后波次
+  activeList.sort(function(a, b) { return a.target - b.target; });
+
+  var lines = activeList.map(function(item) {
+    var d = new Date(item.target);
+    var tStr = pad(d.getUTCHours()) + ':' + pad(d.getUTCMinutes()) + ':' + pad(d.getUTCSeconds());
+    return '[' + item.leader + '] Hits Castle at UTC ' + tStr;
+  });
 
   var textToCopy = lines.join('\n');
   navigator.clipboard.writeText(textToCopy).then(function() {
     var btn = document.getElementById('btnCopyAll');
     if (btn) {
-      btn.innerText = '✅ Copied All!';
+      btn.innerText = '✅ Copied All (' + lines.length + ')!';
       btn.classList.add('copied');
       setTimeout(function() {
         btn.innerText = '📋 Copy All Outcomes';
@@ -244,13 +247,14 @@ function copyAllOutcomes() {
   });
 }
 
-// 确保页面 DOM 全部加载完成后启动计时循环
+// 初始化默认创建 3 张集结卡片并启动时钟
 window.addEventListener('DOMContentLoaded', function() {
+  addLane();
+  addLane();
+  addLane();
   updateClock();
   setInterval(updateClock, 1000);
 });
-updateClock();
-setInterval(updateClock, 1000);
 </script>
 </body>
 </html>
