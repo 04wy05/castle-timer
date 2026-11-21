@@ -63,8 +63,9 @@
   /* Squad Refill Section */
   .refill-panel { background: #1e1e1e; border-radius: 10px; border: 1px solid #333; padding: 14px; margin-top: 8px; }
   .refill-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; padding-bottom: 12px; border-bottom: 1px solid #333; margin-bottom: 12px; }
-  .anchor-status { font-size: 13px; color: #bbb; }
+  .anchor-status { font-size: 13px; color: #bbb; line-height: 1.5; }
   .anchor-highlight { color: #00e676; font-weight: bold; font-size: 15px; }
+  .threat-highlight { color: #ff5252; font-weight: bold; }
   
   .offset-control { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #aaa; }
   .offset-control select { background: #2a2a2a; color: #fff; border: 1px solid #555; border-radius: 4px; padding: 4px 8px; font-size: 13px; }
@@ -114,14 +115,14 @@
 <div class="refill-panel">
   <div class="refill-header">
     <div class="anchor-status" id="anchorInfo">
-      Select an enemy rally above (<b>"Set Refill Anchor"</b>) to calculate teammate launch times.
+      Select the strong enemy rally above (<b>"Defend Against This"</b>) to refill troops right BEFORE they hit.
     </div>
     <div class="offset-control">
       <label for="entryOffset">Enter Castle:</label>
       <select id="entryOffset" onchange="updateClock()">
-        <option value="1" selected>+1s after hit</option>
-        <option value="2">+2s after hit</option>
-        <option value="0">0s (exact hit)</option>
+        <option value="1" selected>-1s before hit</option>
+        <option value="2">-2s before hit</option>
+        <option value="3">-3s before hit</option>
       </select>
     </div>
   </div>
@@ -132,14 +133,11 @@
 <script>
 function pad(n) { return n < 10 ? '0' + n : n; }
 
-// 'standard' | 'offset'
 var inputMode = 'standard';
-
-// 存储每个卡片状态: { id, launchTime, target }
 var lanes = [];
 var nextId = 1;
-var baseLaneId = null;   // Offset 模式下，动态指定的“首车基准”卡片 ID
-var anchorLaneId = null; // 补兵队锁定的“撞击锚点”卡片 ID
+var baseLaneId = null;   // Offset 模式下首车基准 ID
+var anchorLaneId = null; // 选定要防御的强力车头 ID（在其撞击前补兵）
 
 var defaultSquad = [
   { name: 'Member 1', march: '' },
@@ -197,7 +195,7 @@ function renderSquadInputs() {
       '</div>' +
       '<div class="member-result" id="m-res-' + i + '">' +
         '<div class="launch-utc">--:--:--</div>' +
-        '<div class="launch-cd">No anchor</div>' +
+        '<div class="launch-cd">No target</div>' +
       '</div>';
     container.appendChild(row);
   }
@@ -219,7 +217,7 @@ function toggleInputMode() {
     }
     btn.innerText = '🔀 Mode: Offset (+Gap)';
     btn.classList.add('offset-active');
-    hint.innerText = 'Offset Mode: Click "⭐ First" on whichever rally opens first, then enter +s delay on others';
+    hint.innerText = 'Offset Mode: Click "Set as First" on whichever rally opens first, then enter +s delay on others';
   } else {
     inputMode = 'standard';
     btn.innerText = '🔀 Mode: Standard (m/s)';
@@ -231,11 +229,9 @@ function toggleInputMode() {
   recalcAll();
 }
 
-// 动态指定任意一张卡片作为本轮“首车基准”
 function setBaseLane(id) {
   if (baseLaneId === id) return;
   baseLaneId = id;
-  // 切换首车时，清理所有卡片的旧时间推算基准以便重新准确锁定
   for (var i = 0; i < lanes.length; i++) {
     lanes[i].launchTime = null;
     lanes[i].target = null;
@@ -325,7 +321,7 @@ function addLane() {
     '<div class="output-box" id="out-' + id + '">' +
       '<div class="status-idle">Awaiting time input...</div>' +
     '</div>' +
-    '<button class="btn-anchor" id="anchor-btn-' + id + '" onclick="setAnchor(' + id + ')">🎯 Set Refill Anchor</button>';
+    '<button class="btn-anchor" id="anchor-btn-' + id + '" onclick="setAnchor(' + id + ')">🛡️ Defend Against This (Refill Before)</button>';
 
   container.appendChild(card);
   refreshLaneInputModes();
@@ -376,7 +372,6 @@ function recalcAll() {
   var now = Date.now();
   var baseLaunchTime = null;
 
-  // 第一步：先算基准车（在 Standard 模式下所有车都是独立基准；在 Offset 模式下只有 baseLaneId 是基准）
   for (var i = 0; i < lanes.length; i++) {
     var lane = lanes[i];
     var id = lane.id;
@@ -409,7 +404,6 @@ function recalcAll() {
     }
   }
 
-  // 第二步：如果是 Offset 模式，根据首车基准计算其余所有卡片的出发与撞击时刻
   if (inputMode === 'offset') {
     for (var j = 0; j < lanes.length; j++) {
       var otherLane = lanes[j];
@@ -462,11 +456,11 @@ function renderLaneOutput(id, nowTime) {
   if (anchorLaneId === id) {
     card.classList.add('anchor-selected');
     anchorBtn.classList.add('active');
-    anchorBtn.innerText = '✅ Active Refill Anchor';
+    anchorBtn.innerText = '✅ Defending This (Refill Before Hit)';
   } else {
     card.classList.remove('anchor-selected');
     anchorBtn.classList.remove('active');
-    anchorBtn.innerText = '🎯 Set Refill Anchor';
+    anchorBtn.innerText = '🛡️ Defend Against This (Refill Before)';
   }
 
   var target = lane.target;
@@ -499,15 +493,15 @@ function renderLaneOutput(id, nowTime) {
 
 function renderSquadCalculations(nowTime) {
   var infoEl = document.getElementById('anchorInfo');
-  var offsetSec = parseInt(document.getElementById('entryOffset').value) || 0;
+  var beforeSec = parseInt(document.getElementById('entryOffset').value) || 1;
   var anchorLane = anchorLaneId ? getLaneObj(anchorLaneId) : null;
 
   if (!anchorLane || !anchorLane.target) {
-    infoEl.innerHTML = 'Select an active enemy rally above (<b>"Set Refill Anchor"</b>) to calculate launch times.';
+    infoEl.innerHTML = 'Select the strong enemy rally above (<b>"Defend Against This"</b>) to refill troops right BEFORE they hit.';
     for (var i = 0; i < squadData.length; i++) {
       var resEl = document.getElementById('m-res-' + i);
       var rowEl = document.getElementById('m-row-' + i);
-      if (resEl) resEl.innerHTML = '<div class="launch-utc">--:--:--</div><div class="launch-cd">Waiting anchor</div>';
+      if (resEl) resEl.innerHTML = '<div class="launch-utc">--:--:--</div><div class="launch-cd">No target</div>';
       if (rowEl) {
         rowEl.classList.remove('launch-soon');
         rowEl.classList.remove('launch-now');
@@ -517,12 +511,17 @@ function renderSquadCalculations(nowTime) {
   }
 
   var leaderEl = document.getElementById('leader-' + anchorLane.id);
-  var leaderName = (leaderEl && leaderEl.value.trim()) ? leaderEl.value.trim() : 'Selected Rally';
-  var castleEntryTime = anchorLane.target + offsetSec * 1000;
+  var leaderName = (leaderEl && leaderEl.value.trim()) ? leaderEl.value.trim() : 'Target Threat';
+  
+  var hitDate = new Date(anchorLane.target);
+  var hitStr = pad(hitDate.getUTCHours()) + ':' + pad(hitDate.getUTCMinutes()) + ':' + pad(hitDate.getUTCSeconds());
+
+  // 关键修正：在强力大佬撞城 BEFORE（减去 beforeSec 秒）进入王城
+  var castleEntryTime = anchorLane.target - beforeSec * 1000;
   var entryDate = new Date(castleEntryTime);
   var entryStr = pad(entryDate.getUTCHours()) + ':' + pad(entryDate.getUTCMinutes()) + ':' + pad(entryDate.getUTCSeconds());
 
-  infoEl.innerHTML = 'Refilling after <b>[' + escapeHtml(leaderName) + ']</b> &rarr; Target Castle Entry: <span class="anchor-highlight">UTC ' + entryStr + '</span>';
+  infoEl.innerHTML = 'Defending vs <span class="threat-highlight">[' + escapeHtml(leaderName) + ']</span> (Hits UTC ' + hitStr + ') &rarr; Enter Castle: <span class="anchor-highlight">UTC ' + entryStr + '</span> (-' + beforeSec + 's before)';
 
   for (var i = 0; i < squadData.length; i++) {
     var marchSec = parseInt(squadData[i].march);
@@ -600,15 +599,15 @@ function copySquadSchedule() {
   var anchorLane = anchorLaneId ? getLaneObj(anchorLaneId) : null;
   if (!anchorLane || !anchorLane.target) return;
 
-  var offsetSec = parseInt(document.getElementById('entryOffset').value) || 0;
-  var castleEntryTime = anchorLane.target + offsetSec * 1000;
+  var beforeSec = parseInt(document.getElementById('entryOffset').value) || 1;
+  var castleEntryTime = anchorLane.target - beforeSec * 1000;
   var entryDate = new Date(castleEntryTime);
   var entryStr = pad(entryDate.getUTCHours()) + ':' + pad(entryDate.getUTCMinutes()) + ':' + pad(entryDate.getUTCSeconds());
 
   var leaderEl = document.getElementById('leader-' + anchorLane.id);
-  var leaderName = (leaderEl && leaderEl.value.trim()) ? leaderEl.value.trim() : 'Target Rally';
+  var leaderName = (leaderEl && leaderEl.value.trim()) ? leaderEl.value.trim() : 'Target Threat';
 
-  var lines = ['🛡️ REFILL AFTER [' + leaderName + '] (Enter Castle at UTC ' + entryStr + '):'];
+  var lines = ['🛡️ REFILL BEFORE [' + leaderName + '] (Enter Castle at UTC ' + entryStr + '):'];
 
   for (var i = 0; i < squadData.length; i++) {
     var marchSec = parseInt(squadData[i].march);
