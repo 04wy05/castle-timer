@@ -12,8 +12,11 @@
   .utc-label { font-size: 12px; color: #aaa; text-transform: uppercase; letter-spacing: 0.5px; }
   .utc-clock { font-size: 26px; font-weight: bold; color: #00e676; letter-spacing: 1px; }
 
-  .global-actions { display: flex; gap: 8px; flex-wrap: wrap; }
-  .btn-global { border: none; padding: 8px 14px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: bold; color: #fff; }
+  .global-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .btn-global { border: none; padding: 8px 14px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: bold; color: #fff; transition: background 0.2s; }
+  .btn-mode { background: #6a1b9a; border: 1px solid #ab47bc; }
+  .btn-mode:hover { background: #7b1fa2; }
+  .btn-mode.offset-active { background: #e65100; border-color: #ff9800; }
   .btn-global-add { background: #1976d2; }
   .btn-global-add:hover { background: #1e88e5; }
   .btn-global-copy { background: #2e7d32; }
@@ -23,21 +26,29 @@
   .btn-global-reset:hover { background: #616161; }
 
   .section-title { font-size: 14px; font-weight: bold; color: #90caf9; text-transform: uppercase; letter-spacing: 0.5px; margin: 16px 0 10px 0; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+  .mode-badge { font-size: 11px; padding: 3px 8px; border-radius: 4px; background: #2a2a2a; color: #ccc; border: 1px solid #444; text-transform: none; }
 
   .lanes { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; }
   .lane-card { background: #1e1e1e; border-radius: 10px; border: 2px solid #333; padding: 14px; position: relative; transition: border-color 0.2s; }
   .lane-card.danger { border-color: #ff3d00; background: #261414; }
   .lane-card.anchor-selected { border-color: #00e676; box-shadow: 0 0 10px rgba(0, 230, 118, 0.2); }
 
-  .lane-title { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .lane-title { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; gap: 6px; }
+  .lane-title-left { display: flex; align-items: center; gap: 6px; }
   .lane-title span { font-weight: bold; font-size: 15px; color: #ffb74d; }
+  
+  .btn-set-base { background: #333; border: 1px solid #666; color: #ffcc80; padding: 2px 8px; border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: bold; display: none; }
+  .btn-set-base:hover { background: #444; }
+  .btn-set-base.is-base { background: #ff9800; color: #000; border-color: #ffb74d; }
+
   .btn-remove { background: transparent; border: 1px solid #444; color: #888; padding: 2px 7px; border-radius: 4px; cursor: pointer; font-size: 12px; }
   .btn-remove:hover { border-color: #ff5252; color: #ff5252; }
 
-  .input-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 13px; color: #bbb; }
+  .input-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 13px; color: #bbb; min-height: 32px; }
   .input-row input { height: 32px; font-size: 15px; border-radius: 4px; border: 1px solid #555; background: #2a2a2a; color: #fff; }
   .input-leader { width: 150px; padding: 0 8px; text-align: left; }
   .input-num { width: 55px; text-align: center; }
+  .input-gap { width: 70px; text-align: center; border-color: #ff9800 !important; background: #2b2114 !important; color: #ffcc80 !important; font-weight: bold; }
 
   .output-box { margin-top: 10px; padding: 10px; background: #111; border-radius: 6px; text-align: center; border: 1px dashed #444; }
   .hit-label { font-size: 11px; color: #aaa; text-transform: uppercase; letter-spacing: 0.5px; }
@@ -82,6 +93,7 @@
     <div class="utc-clock" id="clock">00:00:00</div>
   </div>
   <div class="global-actions">
+    <button class="btn-global btn-mode" id="btnToggleMode" onclick="toggleInputMode()">🔀 Mode: Standard (m/s)</button>
     <button class="btn-global btn-global-add" onclick="addLane()">➕ Add Rally</button>
     <button class="btn-global btn-global-copy" id="btnCopyRallies" onclick="copyAllRallies()">📋 Copy Enemy Hits</button>
     <button class="btn-global btn-global-reset" onclick="resetAllTimers()">🔄 Reset Timers</button>
@@ -90,6 +102,7 @@
 
 <div class="section-title">
   <span>⚔️ Enemy Rallies Incoming</span>
+  <span class="mode-badge" id="modeHint">Standard Mode: Enter exact waiting time (m/s) for each rally</span>
 </div>
 <div class="lanes" id="lanesContainer"></div>
 
@@ -119,11 +132,15 @@
 <script>
 function pad(n) { return n < 10 ? '0' + n : n; }
 
+// 'standard' | 'offset'
+var inputMode = 'standard';
+
+// 存储每个卡片状态: { id, launchTime, target }
 var lanes = [];
 var nextId = 1;
-var anchorLaneId = null;
+var baseLaneId = null;   // Offset 模式下，动态指定的“首车基准”卡片 ID
+var anchorLaneId = null; // 补兵队锁定的“撞击锚点”卡片 ID
 
-// 默认9人名单（会自动保存在浏览器本地，下次打开还在）
 var defaultSquad = [
   { name: 'Member 1', march: '' },
   { name: 'Member 2', march: '' },
@@ -191,9 +208,84 @@ function escapeHtml(str) {
   return String(str).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
+function toggleInputMode() {
+  var btn = document.getElementById('btnToggleMode');
+  var hint = document.getElementById('modeHint');
+
+  if (inputMode === 'standard') {
+    inputMode = 'offset';
+    if (!baseLaneId && lanes.length > 0) {
+      baseLaneId = lanes[0].id;
+    }
+    btn.innerText = '🔀 Mode: Offset (+Gap)';
+    btn.classList.add('offset-active');
+    hint.innerText = 'Offset Mode: Click "⭐ First" on whichever rally opens first, then enter +s delay on others';
+  } else {
+    inputMode = 'standard';
+    btn.innerText = '🔀 Mode: Standard (m/s)';
+    btn.classList.remove('offset-active');
+    hint.innerText = 'Standard Mode: Enter exact waiting time (m/s) for each rally';
+  }
+
+  refreshLaneInputModes();
+  recalcAll();
+}
+
+// 动态指定任意一张卡片作为本轮“首车基准”
+function setBaseLane(id) {
+  if (baseLaneId === id) return;
+  baseLaneId = id;
+  // 切换首车时，清理所有卡片的旧时间推算基准以便重新准确锁定
+  for (var i = 0; i < lanes.length; i++) {
+    lanes[i].launchTime = null;
+    lanes[i].target = null;
+  }
+  refreshLaneInputModes();
+  recalcAll();
+}
+
+function refreshLaneInputModes() {
+  var baseLaneObj = baseLaneId ? getLaneObj(baseLaneId) : null;
+  var baseLeaderEl = baseLaneObj ? document.getElementById('leader-' + baseLaneObj.id) : null;
+  var baseName = (baseLeaderEl && baseLeaderEl.value.trim()) ? baseLeaderEl.value.trim() : 'First Rally';
+
+  for (var i = 0; i < lanes.length; i++) {
+    var id = lanes[i].id;
+    var stdBox = document.getElementById('std-box-' + id);
+    var gapBox = document.getElementById('gap-box-' + id);
+    var rowLabel = document.getElementById('timer-label-' + id);
+    var baseBtn = document.getElementById('base-btn-' + id);
+    if (!stdBox || !gapBox || !rowLabel || !baseBtn) continue;
+
+    if (inputMode === 'standard') {
+      baseBtn.style.display = 'none';
+      stdBox.style.display = 'inline-block';
+      gapBox.style.display = 'none';
+      rowLabel.innerText = 'Rally Timer (Waiting):';
+    } else {
+      baseBtn.style.display = 'inline-block';
+      if (id === baseLaneId) {
+        baseBtn.classList.add('is-base');
+        baseBtn.innerText = '⭐ First (Base)';
+        stdBox.style.display = 'inline-block';
+        gapBox.style.display = 'none';
+        rowLabel.innerText = 'Base Timer (m/s):';
+      } else {
+        baseBtn.classList.remove('is-base');
+        baseBtn.innerText = 'Set as First';
+        stdBox.style.display = 'none';
+        gapBox.style.display = 'inline-block';
+        rowLabel.innerText = 'Delay vs ' + baseName + ':';
+      }
+    }
+  }
+  updateLaneLabels();
+}
+
 function addLane() {
   var id = nextId++;
-  lanes.push({ id: id, target: null });
+  lanes.push({ id: id, launchTime: null, target: null });
+  if (!baseLaneId) baseLaneId = id;
 
   var container = document.getElementById('lanesContainer');
   var card = document.createElement('div');
@@ -202,24 +294,32 @@ function addLane() {
 
   card.innerHTML =
     '<div class="lane-title">' +
-      '<span class="lane-label">🎯 RALLY ' + lanes.length + '</span>' +
+      '<div class="lane-title-left">' +
+        '<span class="lane-label">🎯 RALLY ' + lanes.length + '</span>' +
+        '<button class="btn-set-base" id="base-btn-' + id + '" onclick="setBaseLane(' + id + ')">Set as First</button>' +
+      '</div>' +
       '<button class="btn-remove" onclick="removeLane(' + id + ')" title="Remove card">✖</button>' +
     '</div>' +
     '<div class="input-row">' +
       '<label>Rally Leader:</label>' +
-      '<input type="text" class="input-leader" id="leader-' + id + '" placeholder="e.g. Boss" oninput="recalc(' + id + ')">' +
+      '<input type="text" class="input-leader" id="leader-' + id + '" placeholder="e.g. Boss" oninput="onLeaderChange()">' +
     '</div>' +
     '<div class="input-row">' +
-      '<label>Rally Timer (Waiting):</label>' +
+      '<label id="timer-label-' + id + '">Rally Timer (Waiting):</label>' +
       '<div>' +
-        '<input type="number" class="input-num" id="waitM-' + id + '" placeholder="m" min="0" oninput="recalc(' + id + ')"> m ' +
-        '<input type="number" class="input-num" id="waitS-' + id + '" placeholder="s" min="0" max="59" oninput="recalc(' + id + ')"> s' +
+        '<span id="std-box-' + id + '">' +
+          '<input type="number" class="input-num" id="waitM-' + id + '" placeholder="m" min="0" oninput="recalcAll()"> m ' +
+          '<input type="number" class="input-num" id="waitS-' + id + '" placeholder="s" min="0" max="59" oninput="recalcAll()"> s' +
+        '</span>' +
+        '<span id="gap-box-' + id + '" style="display:none;">' +
+          '+ <input type="number" class="input-gap" id="gapS-' + id + '" placeholder="sec" min="0" oninput="recalcAll()"> s' +
+        '</span>' +
       '</div>' +
     '</div>' +
     '<div class="input-row">' +
       '<label>March Duration:</label>' +
       '<div>' +
-        '<input type="number" class="input-num" id="marchS-' + id + '" placeholder="s" value="45" min="0" oninput="recalc(' + id + ')"> s' +
+        '<input type="number" class="input-num" id="marchS-' + id + '" placeholder="s" value="45" min="0" oninput="recalcAll()"> s' +
       '</div>' +
     '</div>' +
     '<div class="output-box" id="out-' + id + '">' +
@@ -228,17 +328,25 @@ function addLane() {
     '<button class="btn-anchor" id="anchor-btn-' + id + '" onclick="setAnchor(' + id + ')">🎯 Set Refill Anchor</button>';
 
   container.appendChild(card);
-  updateLaneLabels();
+  refreshLaneInputModes();
+}
+
+function onLeaderChange() {
+  refreshLaneInputModes();
+  updateClock();
 }
 
 function removeLane(id) {
   if (lanes.length <= 1) return;
   if (anchorLaneId === id) anchorLaneId = null;
   lanes = lanes.filter(function(item) { return item.id !== id; });
+  if (baseLaneId === id) {
+    baseLaneId = lanes.length > 0 ? lanes[0].id : null;
+  }
   var card = document.getElementById('card-' + id);
   if (card) card.remove();
-  updateLaneLabels();
-  updateClock();
+  refreshLaneInputModes();
+  recalcAll();
 }
 
 function updateLaneLabels() {
@@ -257,33 +365,73 @@ function getLaneObj(id) {
 
 function setAnchor(id) {
   if (anchorLaneId === id) {
-    anchorLaneId = null; // 再次点击取消锚点
+    anchorLaneId = null;
   } else {
     anchorLaneId = id;
   }
   updateClock();
 }
 
-function recalc(id) {
-  var lane = getLaneObj(id);
-  if (!lane) return;
+function recalcAll() {
+  var now = Date.now();
+  var baseLaunchTime = null;
 
-  var waitMInput = document.getElementById('waitM-' + id);
-  var waitSInput = document.getElementById('waitS-' + id);
-  var marchSInput = document.getElementById('marchS-' + id);
-
-  var rawM = waitMInput ? waitMInput.value.trim() : '';
-  var rawS = waitSInput ? waitSInput.value.trim() : '';
-
-  if (rawM === '' && rawS === '') {
-    lane.target = null;
-  } else {
-    var waitM = parseInt(rawM) || 0;
-    var waitS = parseInt(rawS) || 0;
+  // 第一步：先算基准车（在 Standard 模式下所有车都是独立基准；在 Offset 模式下只有 baseLaneId 是基准）
+  for (var i = 0; i < lanes.length; i++) {
+    var lane = lanes[i];
+    var id = lane.id;
+    var marchSInput = document.getElementById('marchS-' + id);
     var marchS = parseInt(marchSInput ? marchSInput.value : 45) || 0;
-    var totalSec = waitM * 60 + waitS + marchS;
-    lane.target = Date.now() + totalSec * 1000;
+
+    if (inputMode === 'standard' || id === baseLaneId) {
+      var waitMInput = document.getElementById('waitM-' + id);
+      var waitSInput = document.getElementById('waitS-' + id);
+      var rawM = waitMInput ? waitMInput.value.trim() : '';
+      var rawS = waitSInput ? waitSInput.value.trim() : '';
+
+      if (rawM === '' && rawS === '') {
+        lane.launchTime = null;
+        lane.target = null;
+      } else {
+        var waitM = parseInt(rawM) || 0;
+        var waitS = parseInt(rawS) || 0;
+        var waitTotalMs = (waitM * 60 + waitS) * 1000;
+
+        if (document.activeElement === waitMInput || document.activeElement === waitSInput || !lane.launchTime) {
+          lane.launchTime = now + waitTotalMs;
+        }
+        lane.target = lane.launchTime + marchS * 1000;
+      }
+
+      if (id === baseLaneId) {
+        baseLaunchTime = lane.launchTime;
+      }
+    }
   }
+
+  // 第二步：如果是 Offset 模式，根据首车基准计算其余所有卡片的出发与撞击时刻
+  if (inputMode === 'offset') {
+    for (var j = 0; j < lanes.length; j++) {
+      var otherLane = lanes[j];
+      var oid = otherLane.id;
+      if (oid === baseLaneId) continue;
+
+      var oMarchInput = document.getElementById('marchS-' + oid);
+      var oMarchS = parseInt(oMarchInput ? oMarchInput.value : 45) || 0;
+      var gapInput = document.getElementById('gapS-' + oid);
+      var rawGap = gapInput ? gapInput.value.trim() : '';
+
+      if (!baseLaunchTime || rawGap === '') {
+        otherLane.launchTime = null;
+        otherLane.target = null;
+      } else {
+        var gapSec = parseInt(rawGap) || 0;
+        otherLane.launchTime = baseLaunchTime + gapSec * 1000;
+        otherLane.target = otherLane.launchTime + oMarchS * 1000;
+      }
+    }
+  }
+
   updateClock();
 }
 
@@ -323,7 +471,11 @@ function renderLaneOutput(id, nowTime) {
 
   var target = lane.target;
   if (!target) {
-    out.innerHTML = '<div class="status-idle">Awaiting time input...</div>';
+    var baseObj = baseLaneId ? getLaneObj(baseLaneId) : null;
+    var idleMsg = (inputMode === 'offset' && id !== baseLaneId && (!baseObj || !baseObj.launchTime))
+      ? 'Set Base Rally timer first...'
+      : 'Awaiting time input...';
+    out.innerHTML = '<div class="status-idle">' + idleMsg + '</div>';
     card.classList.remove('danger');
     return;
   }
@@ -411,8 +563,11 @@ function resetAllTimers() {
     var id = lanes[i].id;
     var mEl = document.getElementById('waitM-' + id);
     var sEl = document.getElementById('waitS-' + id);
+    var gEl = document.getElementById('gapS-' + id);
     if (mEl) mEl.value = '';
     if (sEl) sEl.value = '';
+    if (gEl) gEl.value = '';
+    lanes[i].launchTime = null;
     lanes[i].target = null;
   }
   updateClock();
