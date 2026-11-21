@@ -3,14 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Castle Rally Radar</title>
+<title>Castle Rally & Refill Radar</title>
 <style>
   * { box-sizing: border-box; }
   body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace; background: #121212; color: #fff; padding: 12px; margin: 0; }
   
-  .header { display: flex; justify-content: space-between; align-items: center; background: #1e1e1e; padding: 12px 16px; border-radius: 8px; margin-bottom: 12px; border: 1px solid #333; flex-wrap: wrap; gap: 10px; }
-  .utc-label { font-size: 13px; color: #aaa; text-transform: uppercase; letter-spacing: 0.5px; }
-  .utc-clock { font-size: 24px; font-weight: bold; color: #00e676; letter-spacing: 1px; }
+  .header { display: flex; justify-content: space-between; align-items: center; background: #1e1e1e; padding: 12px 16px; border-radius: 8px; margin-bottom: 14px; border: 1px solid #333; flex-wrap: wrap; gap: 10px; }
+  .utc-label { font-size: 12px; color: #aaa; text-transform: uppercase; letter-spacing: 0.5px; }
+  .utc-clock { font-size: 26px; font-weight: bold; color: #00e676; letter-spacing: 1px; }
 
   .global-actions { display: flex; gap: 8px; flex-wrap: wrap; }
   .btn-global { border: none; padding: 8px 14px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: bold; color: #fff; }
@@ -22,9 +22,12 @@
   .btn-global-reset { background: #424242; }
   .btn-global-reset:hover { background: #616161; }
 
+  .section-title { font-size: 14px; font-weight: bold; color: #90caf9; text-transform: uppercase; letter-spacing: 0.5px; margin: 16px 0 10px 0; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+
   .lanes { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; }
-  .lane-card { background: #1e1e1e; border-radius: 10px; border: 1px solid #333; padding: 14px; position: relative; }
+  .lane-card { background: #1e1e1e; border-radius: 10px; border: 2px solid #333; padding: 14px; position: relative; transition: border-color 0.2s; }
   .lane-card.danger { border-color: #ff3d00; background: #261414; }
+  .lane-card.anchor-selected { border-color: #00e676; box-shadow: 0 0 10px rgba(0, 230, 118, 0.2); }
 
   .lane-title { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
   .lane-title span { font-weight: bold; font-size: 15px; color: #ffb74d; }
@@ -36,11 +39,39 @@
   .input-leader { width: 150px; padding: 0 8px; text-align: left; }
   .input-num { width: 55px; text-align: center; }
 
-  .output-box { margin-top: 12px; padding: 10px; background: #111; border-radius: 6px; text-align: center; border: 1px dashed #444; }
+  .output-box { margin-top: 10px; padding: 10px; background: #111; border-radius: 6px; text-align: center; border: 1px dashed #444; }
   .hit-label { font-size: 11px; color: #aaa; text-transform: uppercase; letter-spacing: 0.5px; }
   .hit-utc { font-size: 24px; font-weight: bold; color: #ff5252; letter-spacing: 1px; margin: 2px 0; }
-  .countdown { font-size: 15px; color: #ffeb3b; margin-top: 4px; font-weight: bold; }
+  .countdown { font-size: 14px; color: #ffeb3b; margin-top: 4px; font-weight: bold; }
   .status-idle { color: #666; font-size: 13px; padding: 8px 0; }
+
+  .btn-anchor { width: 100%; margin-top: 10px; padding: 7px; border-radius: 6px; border: 1px solid #444; background: #2a2a2a; color: #ccc; font-size: 12px; font-weight: bold; cursor: pointer; }
+  .btn-anchor:hover { background: #333; color: #fff; }
+  .btn-anchor.active { background: #00c853; color: #000; border-color: #00e676; }
+
+  /* Squad Refill Section */
+  .refill-panel { background: #1e1e1e; border-radius: 10px; border: 1px solid #333; padding: 14px; margin-top: 8px; }
+  .refill-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; padding-bottom: 12px; border-bottom: 1px solid #333; margin-bottom: 12px; }
+  .anchor-status { font-size: 13px; color: #bbb; }
+  .anchor-highlight { color: #00e676; font-weight: bold; font-size: 15px; }
+  
+  .offset-control { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #aaa; }
+  .offset-control select { background: #2a2a2a; color: #fff; border: 1px solid #555; border-radius: 4px; padding: 4px 8px; font-size: 13px; }
+
+  .squad-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px; }
+  .member-row { display: flex; align-items: center; justify-content: space-between; background: #141414; border: 1px solid #2c2c2c; padding: 8px 10px; border-radius: 6px; gap: 6px; }
+  .member-row.launch-soon { border-color: #ffab00; background: #262010; }
+  .member-row.launch-now { border-color: #00e676; background: #102618; }
+
+  .member-inputs { display: flex; align-items: center; gap: 6px; }
+  .m-name { width: 95px; height: 28px; font-size: 13px; padding: 0 6px; border-radius: 4px; border: 1px solid #444; background: #222; color: #fff; }
+  .m-march { width: 46px; height: 28px; font-size: 13px; text-align: center; border-radius: 4px; border: 1px solid #444; background: #222; color: #fff; }
+  
+  .member-result { text-align: right; min-width: 105px; }
+  .launch-utc { font-size: 15px; font-weight: bold; color: #4fc3f7; }
+  .launch-cd { font-size: 12px; color: #aaa; }
+  .launch-cd.urgent { color: #ffab00; font-weight: bold; }
+  .launch-cd.go { color: #00e676; font-weight: bold; }
 </style>
 </head>
 <body>
@@ -52,19 +83,113 @@
   </div>
   <div class="global-actions">
     <button class="btn-global btn-global-add" onclick="addLane()">➕ Add Rally</button>
-    <button class="btn-global btn-global-copy" id="btnCopyAll" onclick="copyAllOutcomes()">📋 Copy All Outcomes</button>
+    <button class="btn-global btn-global-copy" id="btnCopyRallies" onclick="copyAllRallies()">📋 Copy Enemy Hits</button>
     <button class="btn-global btn-global-reset" onclick="resetAllTimers()">🔄 Reset Timers</button>
   </div>
 </div>
 
+<div class="section-title">
+  <span>⚔️ Enemy Rallies Incoming</span>
+</div>
 <div class="lanes" id="lanesContainer"></div>
+
+<div class="section-title" style="margin-top: 22px;">
+  <span>🛡️ Refill Squad Dispatch (9 Members Auto-Saved)</span>
+  <button class="btn-global btn-global-copy" id="btnCopySquad" onclick="copySquadSchedule()">📋 Copy Squad Launch Times</button>
+</div>
+
+<div class="refill-panel">
+  <div class="refill-header">
+    <div class="anchor-status" id="anchorInfo">
+      Select an enemy rally above (<b>"Set Refill Anchor"</b>) to calculate teammate launch times.
+    </div>
+    <div class="offset-control">
+      <label for="entryOffset">Enter Castle:</label>
+      <select id="entryOffset" onchange="updateClock()">
+        <option value="1" selected>+1s after hit</option>
+        <option value="2">+2s after hit</option>
+        <option value="0">0s (exact hit)</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="squad-grid" id="squadContainer"></div>
+</div>
 
 <script>
 function pad(n) { return n < 10 ? '0' + n : n; }
 
-// 存储每个卡片的独立状态 { id, target }
 var lanes = [];
 var nextId = 1;
+var anchorLaneId = null;
+
+// 默认9人名单（会自动保存在浏览器本地，下次打开还在）
+var defaultSquad = [
+  { name: 'Member 1', march: '' },
+  { name: 'Member 2', march: '' },
+  { name: 'Member 3', march: '' },
+  { name: 'Member 4', march: '' },
+  { name: 'Member 5', march: '' },
+  { name: 'Member 6', march: '' },
+  { name: 'Member 7', march: '' },
+  { name: 'Member 8', march: '' },
+  { name: 'Member 9', march: '' }
+];
+
+var squadData = [];
+
+function loadSquad() {
+  try {
+    var saved = localStorage.getItem('kingshot_refill_squad_v1');
+    if (saved) {
+      squadData = JSON.parse(saved);
+    } else {
+      squadData = JSON.parse(JSON.stringify(defaultSquad));
+    }
+  } catch (e) {
+    squadData = JSON.parse(JSON.stringify(defaultSquad));
+  }
+  renderSquadInputs();
+}
+
+function saveSquad() {
+  for (var i = 0; i < squadData.length; i++) {
+    var nEl = document.getElementById('m-name-' + i);
+    var mEl = document.getElementById('m-march-' + i);
+    if (nEl) squadData[i].name = nEl.value;
+    if (mEl) squadData[i].march = mEl.value;
+  }
+  try {
+    localStorage.setItem('kingshot_refill_squad_v1', JSON.stringify(squadData));
+  } catch (e) {}
+  updateClock();
+}
+
+function renderSquadInputs() {
+  var container = document.getElementById('squadContainer');
+  container.innerHTML = '';
+  for (var i = 0; i < squadData.length; i++) {
+    var m = squadData[i];
+    var row = document.createElement('div');
+    row.className = 'member-row';
+    row.id = 'm-row-' + i;
+    row.innerHTML =
+      '<div class="member-inputs">' +
+        '<input type="text" class="m-name" id="m-name-' + i + '" value="' + escapeHtml(m.name) + '" placeholder="Name" oninput="saveSquad()">' +
+        '<input type="number" class="m-march" id="m-march-' + i + '" value="' + escapeHtml(m.march) + '" placeholder="sec" min="1" oninput="saveSquad()">s' +
+      '</div>' +
+      '<div class="member-result" id="m-res-' + i + '">' +
+        '<div class="launch-utc">--:--:--</div>' +
+        '<div class="launch-cd">No anchor</div>' +
+      '</div>';
+    container.appendChild(row);
+  }
+}
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
 
 function addLane() {
   var id = nextId++;
@@ -99,18 +224,21 @@ function addLane() {
     '</div>' +
     '<div class="output-box" id="out-' + id + '">' +
       '<div class="status-idle">Awaiting time input...</div>' +
-    '</div>';
+    '</div>' +
+    '<button class="btn-anchor" id="anchor-btn-' + id + '" onclick="setAnchor(' + id + ')">🎯 Set Refill Anchor</button>';
 
   container.appendChild(card);
   updateLaneLabels();
 }
 
 function removeLane(id) {
-  if (lanes.length <= 1) return; // 至少保留1张卡片
+  if (lanes.length <= 1) return;
+  if (anchorLaneId === id) anchorLaneId = null;
   lanes = lanes.filter(function(item) { return item.id !== id; });
   var card = document.getElementById('card-' + id);
   if (card) card.remove();
   updateLaneLabels();
+  updateClock();
 }
 
 function updateLaneLabels() {
@@ -127,20 +255,13 @@ function getLaneObj(id) {
   return null;
 }
 
-function updateClock() {
-  var now = new Date();
-  var h = pad(now.getUTCHours());
-  var m = pad(now.getUTCMinutes());
-  var s = pad(now.getUTCSeconds());
-  var clockEl = document.getElementById('clock');
-  if (clockEl) {
-    clockEl.innerText = h + ':' + m + ':' + s;
+function setAnchor(id) {
+  if (anchorLaneId === id) {
+    anchorLaneId = null; // 再次点击取消锚点
+  } else {
+    anchorLaneId = id;
   }
-
-  var nowTime = now.getTime();
-  for (var i = 0; i < lanes.length; i++) {
-    renderOutput(lanes[i].id, nowTime);
-  }
+  updateClock();
 }
 
 function recalc(id) {
@@ -163,14 +284,42 @@ function recalc(id) {
     var totalSec = waitM * 60 + waitS + marchS;
     lane.target = Date.now() + totalSec * 1000;
   }
-  renderOutput(id, Date.now());
+  updateClock();
 }
 
-function renderOutput(id, nowTime) {
+function updateClock() {
+  var now = new Date();
+  var h = pad(now.getUTCHours());
+  var m = pad(now.getUTCMinutes());
+  var s = pad(now.getUTCSeconds());
+  var clockEl = document.getElementById('clock');
+  if (clockEl) {
+    clockEl.innerText = h + ':' + m + ':' + s;
+  }
+
+  var nowTime = now.getTime();
+  for (var i = 0; i < lanes.length; i++) {
+    renderLaneOutput(lanes[i].id, nowTime);
+  }
+  renderSquadCalculations(nowTime);
+}
+
+function renderLaneOutput(id, nowTime) {
   var lane = getLaneObj(id);
   var out = document.getElementById('out-' + id);
   var card = document.getElementById('card-' + id);
-  if (!lane || !out || !card) return;
+  var anchorBtn = document.getElementById('anchor-btn-' + id);
+  if (!lane || !out || !card || !anchorBtn) return;
+
+  if (anchorLaneId === id) {
+    card.classList.add('anchor-selected');
+    anchorBtn.classList.add('active');
+    anchorBtn.innerText = '✅ Active Refill Anchor';
+  } else {
+    card.classList.remove('anchor-selected');
+    anchorBtn.classList.remove('active');
+    anchorBtn.innerText = '🎯 Set Refill Anchor';
+  }
 
   var target = lane.target;
   if (!target) {
@@ -196,7 +345,68 @@ function renderOutput(id, nowTime) {
   }
 }
 
+function renderSquadCalculations(nowTime) {
+  var infoEl = document.getElementById('anchorInfo');
+  var offsetSec = parseInt(document.getElementById('entryOffset').value) || 0;
+  var anchorLane = anchorLaneId ? getLaneObj(anchorLaneId) : null;
+
+  if (!anchorLane || !anchorLane.target) {
+    infoEl.innerHTML = 'Select an active enemy rally above (<b>"Set Refill Anchor"</b>) to calculate launch times.';
+    for (var i = 0; i < squadData.length; i++) {
+      var resEl = document.getElementById('m-res-' + i);
+      var rowEl = document.getElementById('m-row-' + i);
+      if (resEl) resEl.innerHTML = '<div class="launch-utc">--:--:--</div><div class="launch-cd">Waiting anchor</div>';
+      if (rowEl) {
+        rowEl.classList.remove('launch-soon');
+        rowEl.classList.remove('launch-now');
+      }
+    }
+    return;
+  }
+
+  var leaderEl = document.getElementById('leader-' + anchorLane.id);
+  var leaderName = (leaderEl && leaderEl.value.trim()) ? leaderEl.value.trim() : 'Selected Rally';
+  var castleEntryTime = anchorLane.target + offsetSec * 1000;
+  var entryDate = new Date(castleEntryTime);
+  var entryStr = pad(entryDate.getUTCHours()) + ':' + pad(entryDate.getUTCMinutes()) + ':' + pad(entryDate.getUTCSeconds());
+
+  infoEl.innerHTML = 'Refilling after <b>[' + escapeHtml(leaderName) + ']</b> &rarr; Target Castle Entry: <span class="anchor-highlight">UTC ' + entryStr + '</span>';
+
+  for (var i = 0; i < squadData.length; i++) {
+    var marchSec = parseInt(squadData[i].march);
+    var resEl = document.getElementById('m-res-' + i);
+    var rowEl = document.getElementById('m-row-' + i);
+    if (!resEl || !rowEl) continue;
+
+    rowEl.classList.remove('launch-soon');
+    rowEl.classList.remove('launch-now');
+
+    if (isNaN(marchSec) || marchSec <= 0) {
+      resEl.innerHTML = '<div class="launch-utc">--:--:--</div><div class="launch-cd">Set march sec</div>';
+      continue;
+    }
+
+    var launchTime = castleEntryTime - marchSec * 1000;
+    var launchDate = new Date(launchTime);
+    var lStr = pad(launchDate.getUTCHours()) + ':' + pad(launchDate.getUTCMinutes()) + ':' + pad(launchDate.getUTCSeconds());
+    var secUntilLaunch = Math.round((launchTime - nowTime) / 1000);
+
+    if (secUntilLaunch > 5) {
+      resEl.innerHTML = '<div class="launch-utc">' + lStr + '</div><div class="launch-cd">Send in ' + secUntilLaunch + 's</div>';
+    } else if (secUntilLaunch > 0) {
+      rowEl.classList.add('launch-soon');
+      resEl.innerHTML = '<div class="launch-utc">' + lStr + '</div><div class="launch-cd urgent">READY (' + secUntilLaunch + 's)!</div>';
+    } else if (secUntilLaunch >= -2) {
+      rowEl.classList.add('launch-now');
+      resEl.innerHTML = '<div class="launch-utc">' + lStr + '</div><div class="launch-cd go">🚀 LAUNCH NOW!</div>';
+    } else {
+      resEl.innerHTML = '<div class="launch-utc" style="color:#666;">' + lStr + '</div><div class="launch-cd" style="color:#666;">Passed</div>';
+    }
+  }
+}
+
 function resetAllTimers() {
+  anchorLaneId = null;
   for (var i = 0; i < lanes.length; i++) {
     var id = lanes[i].id;
     var mEl = document.getElementById('waitM-' + id);
@@ -204,27 +414,22 @@ function resetAllTimers() {
     if (mEl) mEl.value = '';
     if (sEl) sEl.value = '';
     lanes[i].target = null;
-    renderOutput(id, Date.now());
   }
+  updateClock();
 }
 
-function copyAllOutcomes() {
+function copyAllRallies() {
   var activeList = [];
   for (var i = 0; i < lanes.length; i++) {
     var lane = lanes[i];
     if (lane.target) {
       var leaderEl = document.getElementById('leader-' + lane.id);
       var leaderName = (leaderEl && leaderEl.value.trim()) ? leaderEl.value.trim() : 'Rally ' + (i + 1);
-      activeList.push({
-        leader: leaderName,
-        target: lane.target
-      });
+      activeList.push({ leader: leaderName, target: lane.target });
     }
   }
-
   if (activeList.length === 0) return;
 
-  // 按撞击时间从早到晚自动排序，方便联盟看先后波次
   activeList.sort(function(a, b) { return a.target - b.target; });
 
   var lines = activeList.map(function(item) {
@@ -233,22 +438,54 @@ function copyAllOutcomes() {
     return '[' + item.leader + '] Hits Castle at UTC ' + tStr;
   });
 
-  var textToCopy = lines.join('\n');
-  navigator.clipboard.writeText(textToCopy).then(function() {
-    var btn = document.getElementById('btnCopyAll');
+  copyText(lines.join('\n'), 'btnCopyRallies', '📋 Copy Enemy Hits');
+}
+
+function copySquadSchedule() {
+  var anchorLane = anchorLaneId ? getLaneObj(anchorLaneId) : null;
+  if (!anchorLane || !anchorLane.target) return;
+
+  var offsetSec = parseInt(document.getElementById('entryOffset').value) || 0;
+  var castleEntryTime = anchorLane.target + offsetSec * 1000;
+  var entryDate = new Date(castleEntryTime);
+  var entryStr = pad(entryDate.getUTCHours()) + ':' + pad(entryDate.getUTCMinutes()) + ':' + pad(entryDate.getUTCSeconds());
+
+  var leaderEl = document.getElementById('leader-' + anchorLane.id);
+  var leaderName = (leaderEl && leaderEl.value.trim()) ? leaderEl.value.trim() : 'Target Rally';
+
+  var lines = ['🛡️ REFILL AFTER [' + leaderName + '] (Enter Castle at UTC ' + entryStr + '):'];
+
+  for (var i = 0; i < squadData.length; i++) {
+    var marchSec = parseInt(squadData[i].march);
+    if (!isNaN(marchSec) && marchSec > 0) {
+      var mName = squadData[i].name.trim() || ('Member ' + (i + 1));
+      var launchTime = castleEntryTime - marchSec * 1000;
+      var lDate = new Date(launchTime);
+      var lStr = pad(lDate.getUTCHours()) + ':' + pad(lDate.getUTCMinutes()) + ':' + pad(lDate.getUTCSeconds());
+      lines.push('• ' + mName + ' (' + marchSec + 's): Launch at UTC ' + lStr);
+    }
+  }
+
+  if (lines.length <= 1) return;
+  copyText(lines.join('\n'), 'btnCopySquad', '📋 Copy Squad Launch Times');
+}
+
+function copyText(text, btnId, defaultText) {
+  navigator.clipboard.writeText(text).then(function() {
+    var btn = document.getElementById(btnId);
     if (btn) {
-      btn.innerText = '✅ Copied All (' + lines.length + ')!';
+      btn.innerText = '✅ Copied!';
       btn.classList.add('copied');
       setTimeout(function() {
-        btn.innerText = '📋 Copy All Outcomes';
+        btn.innerText = defaultText;
         btn.classList.remove('copied');
       }, 2000);
     }
   });
 }
 
-// 初始化默认创建 3 张集结卡片并启动时钟
 window.addEventListener('DOMContentLoaded', function() {
+  loadSquad();
   addLane();
   addLane();
   addLane();
